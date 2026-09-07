@@ -27,6 +27,7 @@
     --ink: #eef1f4;
     --ink-dim: #939ba8;
     --ink-faint: #5c6472;
+    --img-scale: 1;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
@@ -45,6 +46,34 @@
   }
   button{ touch-action:manipulation; -webkit-user-select:none; user-select:none; font-family:inherit; }
   .wrap{ width:100%; max-width:480px; }
+
+  @media (min-width: 620px){
+    .wrap{ max-width:600px; }
+    :root{ --img-scale: 1.2; }
+    body{ padding-top:40px; }
+    .brand .mark{ font-size:25px; }
+    .current-shape{ font-size:34px; }
+    .choice{ font-size:15.5px; padding:16px 12px; }
+    .card{ padding:30px 28px 26px; }
+  }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:720px; }
+    :root{ --img-scale: 1.4; }
+    body{ padding-top:56px; }
+    .brand .mark{ font-size:28px; }
+    .brand .sub{ font-size:13px; }
+    .current-shape{ font-size:38px; }
+    .choice{ font-size:16.5px; padding:18px 14px; }
+    .card{ padding:36px 34px 30px; }
+    .prompt{ font-size:14px; }
+    .track .seg{ height:6px; }
+  }
+
+  @media (min-width: 1280px){
+    .wrap{ max-width:820px; }
+    :root{ --img-scale: 1.55; }
+  }
 
   header{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:14px; gap:10px; }
   .brand{ display:flex; flex-direction:column; gap:2px; }
@@ -396,7 +425,7 @@ function renderShapeIcons(shapeStr, size){
     if(!src){
       return `<div class="shape-chip"><span>${p}</span></div>`;
     }
-    return `<div class="shape-chip"><img src="${src}" alt="${p}" style="width:${size}px"></div>`;
+    return `<div class="shape-chip"><img src="${src}" alt="${p}" style="width:calc(${size}px * var(--img-scale, 1))"></div>`;
   });
   return `<div class="shape-visual">${chips.join('<span class="visual-sep">/</span>')}</div>`;
 }
@@ -423,7 +452,7 @@ function renderShapeVisual(shapeStr, opts){
     if(!src){
       return `<div class="shape-chip"><span>${p}</span></div>`;
     }
-    return `<div class="shape-chip"><img src="${src}" alt="${p}" style="width:${size}px"></div>`;
+    return `<div class="shape-chip"><img src="${src}" alt="${p}" style="width:calc(${size}px * var(--img-scale, 1))"></div>`;
   });
   let html = `<div class="shape-visual">${chips.join('<span class="visual-sep">/</span>')}</div>`;
   if(showLabel){
