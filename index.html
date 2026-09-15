@@ -335,7 +335,7 @@
   }
 
   /* mastery badge */
-  .mastery-row{ display:flex; justify-content:flex-end; margin-bottom:10px; }
+  .mastery-row{ display:flex; justify-content:flex-end; margin-bottom:0; }
   .mastery-badge{
     font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700;
     padding:6px 14px; border-radius:20px; cursor:pointer; border:1px solid var(--edge);
@@ -344,10 +344,27 @@
   .mastery-badge.known{ background:rgba(69,184,173,0.14); border-color:var(--teal); color:var(--teal); }
   .mastery-badge.unknown{ background:rgba(226,96,79,0.10); border-color:var(--coral-dim); color:var(--coral); }
 
-  /* 成形経路: 全体｜派生｜収束 header row */
-  .path-header-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  /* Shared 学習 action row: [全体｜関連 or empty] [一覧に戻る, screen-centered] [未修 or empty].
+     A 3-column grid keeps the center button horizontally fixed regardless of
+     what (if anything) is in the side columns, and the row's height stays
+     constant across the list view and both detail screens. */
+  .study-action-row{
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .study-action-left{ display:flex; justify-content:flex-start; min-width:0; }
+  .study-action-left.invisible{ visibility:hidden; }
+  .study-action-right{ display:flex; justify-content:flex-end; min-width:0; }
   .graph-tabbar{ margin-bottom:0; }
-  .path-header-row .mastery-row{ margin-bottom:0; }
+  .study-back-btn{
+    font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700;
+    padding:6px 14px; border-radius:20px; cursor:pointer; border:1px solid var(--edge);
+    background:transparent; color:var(--ink-dim); white-space:nowrap;
+    visibility:hidden;
+  }
+  .study-back-btn.visible{ visibility:visible; }
+  .study-back-btn:hover{ border-color:var(--ink-faint); color:var(--ink); }
+
   .graph-panel{ display:none; }
   .graph-panel.active{ display:block; }
 
@@ -481,7 +498,16 @@
       </div>
     </div>
 
-    <button class="mini-btn back-btn" id="studyBackBtn">← 一覧に戻る</button>
+    <div class="study-action-row" id="studyActionRow">
+      <div class="study-action-left" id="studyActionLeft">
+        <div class="maxmoves-toggle graph-tabbar" id="graphSubTabBar">
+          <button data-graph-tab="overview" class="active">全体</button>
+          <button data-graph-tab="related">関連</button>
+        </div>
+      </div>
+      <button class="study-back-btn" id="studyBackBtn">一覧に戻る</button>
+      <div class="study-action-right" id="studyActionRight"></div>
+    </div>
 
     <div id="studySharedList">
       <div id="traceShapeList"></div>
@@ -489,14 +515,6 @@
 
     <div class="study-panel active" id="study-path">
       <div id="tracePathWrap">
-        <div class="path-header-row">
-          <div class="maxmoves-toggle graph-tabbar" id="graphSubTabBar">
-            <button data-graph-tab="overview" class="active">全体</button>
-            <button data-graph-tab="related">関連</button>
-          </div>
-          <div id="tracePathMastery"></div>
-        </div>
-
         <div class="graph-panel active" id="graph-overview">
           <div class="trace-card">
             <div id="tracePathContent"></div>
@@ -512,7 +530,6 @@
 
     <div class="study-panel" id="study-scramble">
       <div id="scrambleContentWrap">
-        <div id="studyScrambleMastery"></div>
         <div class="scramble-info">
           <div class="scramble-pattern" id="studyPatternName"></div>
           <div class="scramble-text" id="studyScrambleText"></div>
@@ -1342,11 +1359,18 @@ function renderRelatedBranch(shape, nexts){
 function renderGraphPanels(){
   document.querySelectorAll('#graphSubTabBar button').forEach(b => b.classList.toggle('active', b.getAttribute('data-graph-tab') === graphSubTab));
   document.querySelectorAll('.graph-panel').forEach(p => p.classList.toggle('active', p.id === 'graph-'+graphSubTab));
-  const masteryWrap = document.getElementById('tracePathMastery');
-  masteryWrap.innerHTML = '';
-  masteryWrap.appendChild(renderMasteryBadge(selectedPattern, renderGraphPanels));
+  renderStudyMasteryBadge();
   if(graphSubTab === 'overview') renderTracePathDetail(selectedPattern);
   else if(graphSubTab === 'related') renderRelatedNormal(selectedPattern);
+}
+
+// Populates the shared action-row's right slot with the mastery badge for
+// `selectedPattern`. Used by both 成形経路 and スクランブル detail screens.
+function renderStudyMasteryBadge(){
+  const wrap = document.getElementById('studyActionRight');
+  wrap.innerHTML = '';
+  if(!selectedPattern) return;
+  wrap.appendChild(renderMasteryBadge(selectedPattern, renderStudyMasteryBadge));
 }
 
 // Tapping any node inside 関連 (left-column predecessor, or a branch-group
@@ -1405,6 +1429,14 @@ function refreshStudyView(){
     document.getElementById(id).classList.toggle('hidden', !show);
   });
 
+  // Shared action row: graph tabs only make sense on 成形経路, the back
+  // button is only meaningful once a pattern is selected (space stays
+  // reserved either way so nothing shifts), and the mastery badge is
+  // populated by whichever detail renderer runs below.
+  document.getElementById('studyActionLeft').classList.toggle('invisible', showingStudyList || tab !== 'path');
+  document.getElementById('studyBackBtn').classList.toggle('visible', !showingStudyList);
+  if(showingStudyList) document.getElementById('studyActionRight').innerHTML = '';
+
   if(!showingStudyList && selectedPattern){
     if(tab === 'path') renderGraphPanels();
     else if(tab === 'scramble') renderStudyScrambleDetail();
@@ -1434,9 +1466,7 @@ let studyScrambleIdx = 0;
 
 function renderStudyScrambleDetail(){
   studyScrambleIdx = 0;
-  const masteryWrap = document.getElementById('studyScrambleMastery');
-  masteryWrap.innerHTML = '';
-  masteryWrap.appendChild(renderMasteryBadge(selectedPattern, renderStudyScrambleDetail));
+  renderStudyMasteryBadge();
   renderStudyScrambleInfo();
 }
 
